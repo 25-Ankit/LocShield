@@ -1,0 +1,3 @@
+plugins {
+    // Applied per-module.
+}

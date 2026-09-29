@@ -1,0 +1,32 @@
+# Gradle build state (regenerable)
+.gradle/
+**/.gradle/
+
+# Build outputs (regenerable via assembleDebug / build)
+**/build/
+*.apk
+*.aab
+*.aar
+
+# Android SDK location (machine-specific, standard exclusion)
+local.properties
+
+# Kotlin daemon sessions and error logs
+.kotlin/
+
+# IDE and editor metadata
+.idea/
+*.iml
+.vscode/
+*.swp
+*~
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Java bytecode (never commit compiled classes)
+*.class
