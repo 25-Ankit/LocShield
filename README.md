@@ -1,5 +1,7 @@
 # LocShield — Per-Application Location Precision & Privacy Control Framework for Android
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **LocShield is a research and engineering framework for enforcing application-specific least-privilege access to location information on Android.**
 
 > **Location Least-Privilege Principle:** *An application should receive no more location information than is necessary for its authorized functionality and permitted by the effective policy.*
@@ -281,6 +283,7 @@ LOCSHIELD/
 │                            #   AIDL/API contracts, plans, readiness reports
 ├── build.gradle.kts / settings.gradle.kts / gradlew*  # root Gradle wiring
 ├── gradle.properties        # local JDK pin for the build
+├── LICENSE                  # MIT License
 └── README.md                # this file
 ```
 
@@ -393,7 +396,9 @@ Please open an issue first for anything touching frozen specifications or the v0
 
 ## 25. License
 
-No license file is present in this repository yet; licensing has not been specified. All rights are reserved by default until a license is added.
+LocShield is licensed under the [MIT License](LICENSE).
+
+Copyright © 2026 Ankitmishra
 
 ## 26. Author / Project
 
