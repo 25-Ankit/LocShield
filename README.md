@@ -11,6 +11,9 @@
 | Research & architecture baseline | Complete |
 | Policy Engine v0.1 (pure Kotlin/JVM) | Implemented, frozen — 188/188 tests passing |
 | AOSP / framework integration | Designed, **not yet implemented** |
+| LSPosed prototype architecture | Specification complete |
+| LSPosed device readiness | Blocked — no usable runtime target |
+| LSPosed implementation | Not started |
 | Device / runtime validation | Pending |
 
 This repository is the working research record: specifications, a tested policy engine, enforcement analysis, diagnostic tooling, and explicit readiness gates. It is **not** a finished product, and it does not claim protections it has not built.
@@ -24,6 +27,13 @@ Modern Android location access is governed by permission grants (coarse vs. fine
 LocShield investigates a different model: **policy mediation instead of permission gating alone**. A per-application policy constrains *what* location information an app receives — spatial precision, temporal frequency, foreground/background context, source channel, and metadata — while Android's own permission grant remains an inviolable ceiling that policy can only restrict, never exceed.
 
 LocShield is a **system-level research project**: the enforcement point it designs toward is a privileged framework service, not an ordinary app. A regular APK cannot transparently mediate another app's location stream, and this repository never pretends otherwise.
+
+LocShield now has two planned platform-enforcement paths around the same frozen Policy Engine:
+
+- **LSPosed prototype** — an experimental enforcement adapter for validating policy behavior, delivery-time semantics, bypasses, and overhead on a rooted test target.
+- **AOSP / system-service integration** — the eventual framework implementation inside `system_server`.
+
+The LSPosed path is strictly experimental validation scaffolding. It does **not** replace the final AOSP architecture, confers no system-wide enforcement, and has not yet been implemented — device readiness for it is currently blocked (see `docs/LSPOSED_DEVICE_READINESS_v1.md`).
 
 ## 2. Research Problem
 
@@ -94,7 +104,10 @@ Android location enforcement paths (planned: framework hooks)
 
 - **Control plane** (planned): the Control APK edits policy and inspects status; it never sees raw location and never sits in the delivery path.
 - **Privileged service** (planned): hosts identity resolution, policy storage, and the Binder interface inside `system_server`.
-- **Policy engine** (implemented): pure, deterministic, Android-independent decision logic.
+- **Policy engine** (implemented): pure, deterministic, Android-independent decision logic. It remains the common decision core for every enforcement path.
+- **Platform enforcement adapter** (planned): consumes engine decisions and actuates them per platform, in two variants —
+  - *LSPosed prototype adapter* (experimental/validation path; not started),
+  - *AOSP/framework adapter* (long-term system-level implementation; not started).
 - **Enforcement hot path** (planned): per-delivery interception in the framework location pipeline.
 - **Transformation layer** (engine implemented; framework wiring planned): converts a raw fix into the policy-compliant representation plus sanitized metadata.
 
@@ -247,8 +260,11 @@ The intended integration (planned, designed, **not implemented**) proceeds in re
 | Policy Engine tests | Complete | 15 suites, **188/188 passing** (re-verified locally) |
 | Policy Engine artifact | Frozen | Reproducible Gradle `jar`; hash in §19 |
 | Diagnostic apps (5) | Complete | `android-experiments/apps/` (source only; APKs git-ignored) |
+| LSPosed prototype architecture | Complete | Readiness specification (`docs/LSPOSED_PROTOTYPE_READINESS_v1.md`) |
+| LSPosed device readiness | Blocked | No booted API-34 target; root/LSPosed not demonstrated |
+| LSPosed hook implementation | Planned / Not started | Waiting for K.1–K.3 (see below) |
+| AOSP Commit 1 | Blocked | Provisioned AOSP build host required |
 | AOSP workspace | Blocked | No tree; ~5 GiB free vs ~250–400 GB needed |
-| AOSP Commit 1 | Blocked | Planned; gated on provisioned build host |
 | SELinux build | Blocked | Tooling + tree absent |
 | Runtime / device validation | Pending | Planned experiment program (§15) |
 | GMS validation | Pending | Requires per-build dynamic tracing |
@@ -271,6 +287,16 @@ The planned program (diagnostic apps in `android-experiments/`, procedures in th
 | E-GNSS-01 | Are fixes and measurement callbacks governed by equivalent gates? |
 
 Evidence tiers are kept distinct: **source-level** (AOSP tree reads — partially done), **build** (compilation — pending), **runtime** (emulator/device traces — pending), **empirical experiment** (the above program — pending). No experiment is claimed complete.
+
+### First LSPosed vertical slice (planned, not implemented)
+
+The first intended hook is **`getLastKnownLocation()`**: under a CITY or GRID fixture policy, the prototype would interpose evaluation, transformation, and sanitization before returning the fix, recording the original vs. transformed location, hook execution proof, identity, decision, and post-transform metadata. This slice is **not yet implemented** — hook work begins only after all three readiness gates pass:
+
+- **K.1** — booted API-34 target
+- **K.2** — root + pinned LSPosed demonstrated
+- **K.3** — unhooked baseline behavior captured
+
+See `docs/LSPOSED_PROTOTYPE_READINESS_v1.md` (architecture and 10-point verification gate) and `docs/LSPOSED_DEVICE_READINESS_v1.md` (current verdict: NOT AUTHORIZED).
 
 ## 16. Repository Structure
 
@@ -315,6 +341,8 @@ Generated outputs (`build/`, `.gradle/`, APKs, `local.properties`) are intention
 | AOSP Commit-1 Readiness Report v1 | Environment verdict: BLOCKED | Complete |
 | HOST_ENVIRONMENT.md | Observed host facts | Complete |
 | Policy Engine IMPLEMENTATION_NOTES.md | Terminology mapping, prototype choices | Complete |
+| LSPosed Prototype Readiness v1 (`docs/`) | Prototype architecture, hook surface, verification gate | Complete |
+| LSPosed Device Readiness v1 (`docs/`) | Target assessment; verdict: NOT AUTHORIZED | Complete |
 
 ## 18. Build / Run
 
@@ -356,7 +384,10 @@ LocShield is a research project. Its security properties hold **within the docum
 ## 21. Limitations
 
 - AOSP integration (service, hooks, SELinux, permission grant) is designed but **not implemented**.
+- The LSPosed prototype has **not yet been implemented**; no runtime hook coverage has been experimentally demonstrated.
+- A usable rooted/LSPosed Android target is not currently available (device readiness: blocked).
 - GMS Core is closed source; framework-hook coverage of GMS paths is **unproven by design** until traced per build.
+- GMS, geofence, passive, and other LSPosed paths remain hypotheses until experimentally validated.
 - Vendor, HAL, and OEM ROM behavior is assumed non-uniform and largely untested.
 - Runtime and device validation (emulator and physical) is pending; current evidence is source-level plus engine-level.
 - Kernel, baseband, carrier, and remote-server inference are outside the boundary.
@@ -370,17 +401,17 @@ LocShield is a research project. Its security properties hold **within the docum
 | Phase 0 — Research baseline | Docs 01–13, threat model, requirements | ✅ Complete |
 | Phase 1 — Policy Engine v0.1 | Model, evaluation, transforms, 188-test suite | ✅ Complete / frozen |
 | Phase 2 — AOSP build readiness | Host provisioning, workspace, baseline builds | ✅ Assessed / ⛔ currently blocked |
-| Phase 3 — AOSP Commit 1 | Permission, service skeleton, SELinux, linkage | ⏳ Pending provisioned host |
-| Phase 4 — System service + engine integration | Policy lifecycle in `system_server` | ⏳ Planned |
-| Phase 5 — Delivery-time enforcement | Framework interception paths | ⏳ Planned |
-| Phase 6 — GNSS / cache / passive / geofence protections | Side-channel and derived-path gates | ⏳ Planned |
-| Phase 7 — GMS boundary experiments | Per-build tracing, backstop validation | ⏳ Planned |
-| Phase 8 — Device / emulator validation | Full experiment program on hardware | ⏳ Planned |
-| Phase 9 — Privacy / utility / performance evaluation | Measured trade-offs on real builds | ⏳ Planned |
+| Phase 3 — LSPosed prototype readiness | Prototype architecture, hook surface, verification gate | ✅ Complete |
+| Phase 4 — LSPosed device readiness | Booted target, root/LSPosed, baselines | ⛔ Blocked |
+| Phase 5 — First LSPosed vertical slice | Hooked `getLastKnownLocation()` under CITY/GRID fixture | ⏳ Pending K.1–K.3 |
+| Phase 6 — LSPosed enforcement expansion | Updates, passive, geofence, FLP, bypass analysis | ⏳ Planned |
+| Phase 7 — Privacy / utility / performance | Measured trade-offs on prototype, then real builds | ⏳ Planned |
+| Phase 8 — AOSP implementation | Permission, service, hooks, SELinux on provisioned host | ⏳ Pending stronger build host |
+| Phase 9 — Full runtime / device validation | Full experiment program on hardware | ⏳ Planned |
 
 ## 23. Research Status Statement
 
-LocShield is currently in the research-and-core-engineering stage. The policy engine and architectural foundation are implemented and documented; Android framework integration remains a gated next phase requiring a provisioned AOSP build environment.
+The Policy Engine and architectural foundation are implemented and frozen. The LSPosed prototype architecture and readiness specification are complete, but device readiness is currently blocked. AOSP framework integration remains a separate later phase requiring a provisioned build environment.
 
 ## 24. Contributing
 
